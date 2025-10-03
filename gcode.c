@@ -102,6 +102,7 @@ int main( int argc, char *argv[] ) {
 
 				apply_mode( &machine, &p );
 
+				printf( "\n\nSTARTING:\nX = %f, %Y = %f\nI = %f, J = %f\n\n", p.x, p.y, center.x, center.y );
 				if( cmd == 2 ) {	// G02
 					if( mv_circ( &machine, p, center, CW ) ) return 1;
 				} else {		// G03
