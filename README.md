@@ -10,6 +10,8 @@ Valittu toteutustapa perustuu "käsivarteen", jonka päässä on kynä. Käsivar
 
 Ensimmäisessä simulaatioprotossa käytin itse tehtyä G-koodin tulkkia, mutta päädyin toista protoa varten rakentamaan oman SVG-tulkin, sillä laitteen syötteenä on joka tapauksessa vektorigrafiikka, jonka muuntaminen G-koodiksi on vähemmän mielenkiintoista. Tyypillisesti tällaisissa DIY-piirtureissa käytetään G-koodia piirturin ohjaamiseen, jolloin vektorigrafiikka täytyy muuntaa jollain työkalulla G-koodiksi laitetta varten. Oman SVG-tulkin kirjoittaminen on ollut mielenkiintoista, ja se on pakottanut perehtymään niin tulkkien toimintaan kuin ellipsien matemaattisiin ongelmiin.
 
+Projekti on aloitettu loppukeväästä 2025, ja sitä on vähitellen muilta kiireiltä edistetty.
+
 Projektin nimi "yaplot" tulee sanoista "yet another plotter", "jälleen uusi piirturi".
 
 ## TILANNE 3.10.2025
