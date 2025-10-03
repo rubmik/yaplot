@@ -1,6 +1,6 @@
 # yaplot
 
-HARRASTUSPROJEKTI
+## HARRASTUSPROJEKTI
 
 Katselin netissä videoita DIY-piirtureista (engl. plotter), ja päätin kokeilumielessä ja harrastuksen vuoksi lähteä rakentamaan omaa.
 
@@ -12,7 +12,7 @@ Ensimmäisessä simulaatioprotossa käytin itse tehtyä G-koodin tulkkia, mutta 
 
 Projektin nimi "yaplot" tulee sanoista "yet another plotter", "jälleen uusi piirturi".
 
-TILANNE 3.10.2025
+## TILANNE 3.10.2025
 
 Valmiina on käsivarren ohjaus simulaatiossa, ja suurin osa SVG-tulkista.
 
