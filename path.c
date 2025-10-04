@@ -119,18 +119,21 @@ int find_ellipse_center( ellipse *_e, point _p1, point _p2, char _large_arc, cha
 	angles[0] = ( angles[0] < 0 ? 2*M_PI+angles[0] : angles[0] );
 	angles[1] = ( angles[1] < 0 ? 2*M_PI+angles[1] : angles[1] );
 
-//	printf( "center 1: (%f, %f)\n", o[0].x, o[0].y );
-/*	printf( "center 2: (%f, %f)\n", o[1].x, o[1].y );
-	printf( "angles[0] > angles[1] ) == ( _large_arc == _sweep )\n" );
-	printf( "%f > %f ) == ( %d == %d )\n", angles[0], angles[1], _large_arc, _sweep );
-	printf( "%d ) == ( %d ) -->", angles[0] > angles[1], _large_arc == _sweep );
-	printf( "%d\n", ( angles[0] > angles[1] ) == ( _large_arc == _sweep ) );*/
-//	printf( "point 1: (%f, %f) -> %f degrees\n", _p1.x, _p1.y, angles[0]*180/M_PI );
-//	printf( "point 2: (%f, %f) -> %f degrees\n", _p2.x, _p2.y, angles[1]*180/M_PI );
+	// arc length
+	double arc_len = angles[0]-angles[1];
+	if( ( _large_arc && arc_len < M_PI ) || ( !_large_arc && arc_len > M_PI ) ) arc_len = 2*M_PI - arc_len;
+	if( arc_len < 0 ) arc_len = 2*M_PI + arc_len;
 
-	char select = ( angles[0] < angles[1] ) == ( _large_arc == _sweep );
-	_e->k = o[select].x;
-	_e->h = o[select].y;
+	// test
+	_e->k = o[0].x;
+	_e->h = o[0].y;
+	point test;
+	char dir = ( _sweep ? 1 : -1 );
+	test = get_ellipse_point( *_e, angles[0] + arc_len*dir );
+	if( !( fabs( test.x - _p2.x ) < 0.00001 && fabs( test.y - _p2.y ) < 0.00001 ) ) {
+		_e->k = o[1].x;
+		_e->h = o[1].y;
+	}
 
 	return 0;
 }
@@ -503,7 +506,7 @@ int map_path( path *_b, token *_tl ) {
 				fprintf( stderr, "warning: incomplete point data\n" );
 				break;
 			}
-			p.x = atof( t->data );
+			p.x = atof( t->data ); // NB: degrees
 			p.y = atoi( t->next->data ) + 2*atoi( t->next->next->data );
 			add_point( _b, p );
 
@@ -582,50 +585,29 @@ int q_curveto( point _p0, point _bp1, point _p2, int (*_func)(point) ) {
 }
 
 int ell_arc( point _start, double _a, double _b, double _th, char _large_arc, char _sweep, point _end, int (*_func)(point) ) {
-	ellipse e = get_ellipse( 0, 0, _a, _b, _th*180/M_PI );
+	ellipse e = get_ellipse( 0, 0, _a, _b, _th*M_PI/180 ); // NB now we convert degrees into radians
 	if( find_ellipse_center( &e, _start, _end, _large_arc, _sweep ) ) {
 		printf( "improper arc definition, cannot have P1 = P2\n" );
 		return 1;
 	}
 	point p;
-	double t_start = atan2( _start.y-e.h, _start.x-e.k ); //get_point_angle( e, _start );
-//	printf( "hei %f\n(%f, %f) (%f, %f)\n", t_start*180/M_PI, e.k, e.h, _start.x, _start.y );
-//	double eriangle = atan2( _start.y-e.h, _start.x-e.k );
-//	if( eriangle < 0 ) eriangle += 2*M_PI;
+
+	double incr = T_RESO;
+	char dir = ( _sweep ? 1 : -1 );
+
+	double t_start = atan2( _start.y-e.h, _start.x-e.k );
 	if( t_start < 0 ) t_start += 2*M_PI;
-//	t_start = eriangle;
-//	printf( "%f\n", eriangle*180/M_PI );
-//	double t_dist = atan2( _end.y-e.h, _end.x-e.k ); //fabs( get_point_angle( e, _end ) - t_start );
-//	if( t_dist < 0 ) t_dist += 2*M_PI;
-//	t_dist = fabs( t_dist - t_start );
-/*	double incr = T_RESO;
-	char dir = ( _sweep == 0 ? -1 : 1 );
+	double t_end = atan2( _end.y-e.h, _end.x-e.k );
+	if( t_end < 0 ) t_end += 2*M_PI;
+	double t_dist = fabs( t_end-t_start );
+	if( ( _large_arc && t_dist < M_PI ) || ( !_large_arc && t_dist > M_PI ) ) t_dist = 2*M_PI - t_dist;
+
 	double t; for( t = 0; t <= t_dist; t += incr ) {
 		p = get_ellipse_point( e, t_start + t*dir );
 		(*_func)( p );
-	}*/
-	double t_end = atan2( _end.y-e.h, _end.x-e.k );
-//	if( t_end < 0 ) t_end += 2*M_PI;
-//	else if( t_end == 0 ) t_end = 2*M_PI;
-	double incr = T_RESO;
-	double t = t_start;
-	printf( "heips\n" );
-	if( _sweep == 0 ) { // CCW
-		if( t == 0 ) t = 2*M_PI;
-		while( t > t_end ) {
-			p = get_ellipse_point( e, t );
-			t -= incr;
-			(*_func)( p );
-		}
-	} else {
-		printf( "heido\n%f < %f\n", t, t_end );
-		if( t_end == 0 ) t_end = 2*M_PI;
-		while( t < t_end ) {
-			p = get_ellipse_point( e, t );
-			t += incr;
-			(*_func)( p );
-		}
 	}
+
+	return 0;
 }
 
 int print( path *_b ) {
@@ -714,7 +696,6 @@ int print( path *_b ) {
 				bp.type = CMD_T + p.type % 2;
 			}
 			point end = p;
-			printf( "Q %f, %f    %f, %f\n", bp.x, bp.y, end.x, end.y );
 			q_curveto( prev, bp, end, print_point );
 			prev = end;
 			prev_cp = bp;
@@ -725,7 +706,7 @@ int print( path *_b ) {
 		if( hasflag( p.type, CMD_A ) ) {
 			double a = p.x;
 			double b = p.y;
-			double th = _b->p[++i].x;
+			double th = _b->p[++i].x; // NB degrees
 			char large_arc = (int)(_b->p[i].y) % 2;
 			char sweep = _b->p[i].y > 1;
 			point end = _b->p[++i];
