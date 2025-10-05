@@ -364,8 +364,8 @@ int print_type( char _t ) {
 	if( hasflag( _t, CMD_T ) ) printf( "smooth quadratic curveto " );
 	if( hasflag( _t, CMD_A ) ) printf( "arc " );
 	if( hasflag( _t, CMD_Z ) ) printf( "closeto " );
-	if( hasflag( _t, M_ABS ) ) printf( "(absolute)\n" );
-	else printf( "(relative)\n" );
+	if( hasflag( _t, M_ABS ) ) printf( "(absolute) " );
+	else printf( "(relative) " );
 	return 0;
 }
 
@@ -400,8 +400,11 @@ int map_path( path *_b, token *_tl ) {
 			p.type = type;
 			add_point( _b, p );
 
-			if( hasflag( type, CMD_M ) )
+			if( hasflag( type, CMD_M ) ) {
+				type = CMD_L;
+				if( hasflag( p.type, M_ABS ) ) type |= M_ABS;
 				initial = p;
+			}
 
 			p0 = p;
 			t = t->next->next;
