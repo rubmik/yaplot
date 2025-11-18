@@ -39,14 +39,33 @@ int add_point( path *, point );
 point cubic_bez( point *, double );
 point line_bez( point *, double );
 
+// machine
+#define ARM_A 60.0
+#define ARM_B 50.0
+#define STEPS 180
+#define PI2 6.283185
+typedef struct {
+	double alpha;
+	double beta;
+	point pos;
+	float z;
+} state;
+int init_machine( state * );
+int go_to_pos( state *, point );
+int calc_pos( point *, double, double );
+int calc_angles( double *, double *, point );
+int round_angle( double * );
+int turn_motors( state *, int, int );
+int draw_pos( state * ); // tmp
+
 // print
 #define T_RESO 0.01
 #define M_CUBIC 1
 #define M_LINE 2
 point print_curve( path *, char );
 
-// load line
-int load_line( char **, char * );
+// load file
+int load_file( char **, char * );
 
 // find functionality
 int isnum( char * );
@@ -85,8 +104,8 @@ char hasflag( char, char );
 int print_type( char ); // tmp
 int map_path( path *, token * );
 int print_point( point );
-int lineto( point, point, int (*_func)(point) );
-int curveto( point, point, point, point, int (*_func)(point) );
-int q_curveto( point, point, point, int (*_func)(point) );
-int ell_arc( point, double, double, double, char, char, point, int (*_func)(point) );
+int lineto( point, point, state * );
+int curveto( point, point, point, point, state * );
+int q_curveto( point, point, point, state * );
+int ell_arc( point, double, double, double, char, char, point, state * );
 int print( path * );

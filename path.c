@@ -179,6 +179,80 @@ point line_bez( point *_p, double _t ) {
 	return p;
 }
 
+// the machine
+int init_machine( state *_m ) {
+	_m->alpha = 0;
+	_m->beta = 0;
+	calc_pos( &_m->pos, _m->alpha, _m->beta );
+	_m->z = 0;
+	return 0;
+}
+
+int go_to_pos( state *_m, point _p ) {
+	// check if point is within reach
+	double d = SQ(_p.x) + SQ(_p.y);
+	if( SQ(ARM_A-ARM_B) > d || SQ(ARM_A+ARM_B) < d ) {
+		printf( "ERROR: point not within reach\n" );
+		return 1;
+	}
+
+	double alpha, beta; // used for destination
+	calc_angles( &alpha, &beta, _p );
+	round_angle( &alpha );
+	round_angle( &beta );
+	int a_steps, b_steps; // number of steps (incl direction)
+	a_steps = round( (alpha - _m->alpha)*STEPS/PI2 );
+	b_steps = round( (beta - _m->beta)*STEPS/PI2 );
+	turn_motors( _m, a_steps, b_steps ); // turn motors
+
+	return 0;
+}
+
+int calc_pos( point *_p, double _alpha, double _beta ) {
+	// for proof, see illus_0.pdf
+	double gamma = _alpha+_beta + ( _alpha+_beta < M_PI ? M_PI : -M_PI );
+	_p->x = ARM_A*cos( _alpha ) + ARM_B*cos( gamma );
+	_p->y = ARM_A*sin( _alpha ) + ARM_B*sin( gamma );
+	return 0;
+}
+
+int calc_angles( double *_alpha, double *_beta, point _p ) {
+	// for proof, see illus_1.pdf
+	double alpha_1, alpha_2, c;
+	c = sqrt( SQ(_p.x) + SQ(_p.y) );
+	*_beta = acos( ( c*c - SQ(ARM_A) - SQ(ARM_B) )/( -2*ARM_A*ARM_B ) );
+	alpha_1 = atan( _p.y/_p.x );
+	alpha_2 = asin( ARM_B*sin( *_beta )/c );
+	if( SQ(ARM_B) < SQ(_p.x) + SQ(_p.y-ARM_A) ) {
+		*_beta = PI2-*_beta;
+		*_alpha = alpha_1-alpha_2;
+	} else  *_alpha = alpha_1+alpha_2;
+	return 0;
+}
+
+int round_angle( double *_angle ) {
+	double step = PI2/STEPS;
+	int steps = round( *_angle/step );
+	*_angle = step*steps;
+	return 0;
+}
+
+int turn_motors( state *_m, int _a, int _b ) {
+	_m->alpha += _a*PI2/STEPS;
+	round_angle( &_m->alpha );
+	_m->beta += _b*PI2/STEPS;
+	round_angle( &_m->beta );
+	calc_pos( &_m->pos, _m->alpha, _m->beta );
+	draw_pos( _m );
+	return 0;
+}
+
+int draw_pos( state *_m ) {
+	if( _m->z <= 0 );
+		printf( "<circle cx='%f' cy='%f' r='1' fill='red' />\n", _m->pos.x, _m->pos.y );
+	return 0;
+}
+
 // print
 point print_curve( path *_b, char _mode ) {
 	point p; double t;
@@ -205,26 +279,26 @@ point print_curve( path *_b, char _mode ) {
 	return p;
 }
 
-// load line
-int load_line( char **_l, char *_fn ) {
+// load file
+int load_file( char **_f, char *_fn ) {
 	FILE *fp = fopen( _fn, "r" );
-	int c, llen = 128;
-	char *line = malloc( llen+1 );
+	int c, flen = 128;
+	char *file = malloc( flen+1 );
 	int i = 0; while( c = fgetc( fp ) ) {
 		if( c == EOF ) {
-			line[i] = 0;
+			file[i] = 0;
 			break;
 		}
-		if( i == llen ) {
-			llen += 128;
-			line = realloc( line, llen+1 );
-		} line[i] = c; i++;
+		if( i == flen ) {
+			flen += 128;
+			file = realloc( file, flen+1 );
+		} file[i] = c; i++;
 	}
 	fclose( fp );
 
-	*_l = malloc( strlen( line )+1 );
-	strcpy( *_l, line );
-	free( line );
+	*_f = malloc( strlen( file )+1 );
+	strcpy( *_f, file );
+	free( file );
 	return 0;
 }
 
@@ -555,39 +629,39 @@ int print_point( point _p ) {
 	return 0;
 }
 
-int lineto( point _p0, point _p1, int (*_func)(point) ) {
+int lineto( point _p0, point _p1, state *_m ) {
 	point p;
 	double dx = _p1.x-_p0.x;
 	double dy = _p1.y-_p0.y;
 	double t; for( t = 0; t <= 1; t += T_RESO ) {
 		p.x = _p0.x + t*dx;
 		p.y = _p0.y + t*dy;
-		(*_func)( p );
+		go_to_pos( _m, p );
 	}
 	return 0;
 }
 
-int curveto( point _p0, point _bp1, point _bp2, point _p3, int (*_func)(point) ) {
+int curveto( point _p0, point _bp1, point _bp2, point _p3, state *_m ) {
 	point p;
 	double t; for( t = 0; t <= 1; t += T_RESO ) {
 		p.x = CB(1-t)*_p0.x + 3*SQ(1-t)*t*_bp1.x + 3*(1-t)*SQ(t)*_bp2.x + CB(t)*_p3.x;
 		p.y = CB(1-t)*_p0.y + 3*SQ(1-t)*t*_bp1.y + 3*(1-t)*SQ(t)*_bp2.y + CB(t)*_p3.y;
-		(*_func)( p );
+		go_to_pos( _m, p );
 	}
 	return 0;
 }
 
-int q_curveto( point _p0, point _bp1, point _p2, int (*_func)(point) ) {
+int q_curveto( point _p0, point _bp1, point _p2, state *_m ) {
 	point p;
 	double t; for( t = 0; t <= 1; t += T_RESO ) {
 		p.x = SQ(1-t)*_p0.x + 2*(1-t)*t*_bp1.x + SQ(t)*_p2.x;
 		p.y = SQ(1-t)*_p0.y + 2*(1-t)*t*_bp1.y + SQ(t)*_p2.y;
-		(*_func)( p );
+		go_to_pos( _m, p );
 	}
 	return 0;
 }
 
-int ell_arc( point _start, double _a, double _b, double _th, char _large_arc, char _sweep, point _end, int (*_func)(point) ) {
+int ell_arc( point _start, double _a, double _b, double _th, char _large_arc, char _sweep, point _end, state *_m ) {
 	ellipse e = get_ellipse( 0, 0, _a, _b, _th*M_PI/180 ); // NB now we convert degrees into radians
 	if( find_ellipse_center( &e, _start, _end, _large_arc, _sweep ) ) {
 		printf( "improper arc definition, cannot have P1 = P2\n" );
@@ -607,146 +681,9 @@ int ell_arc( point _start, double _a, double _b, double _th, char _large_arc, ch
 
 	double t; for( t = 0; t <= t_dist; t += incr ) {
 		p = get_ellipse_point( e, t_start + t*dir );
-		(*_func)( p );
+		go_to_pos( _m, p );
 	}
 
 	return 0;
 }
 
-int print( path *_b ) {
-	point prev = get_point( 0, 0 );
-	point prev_cp;
-	point p;
-	int i; for( i = 0; i < _b->n; i++ ) {
-		p = _b->p[i];
-
-		// moveto
-		if( hasflag( p.type, CMD_M ) ) {
-			prev = p;
-			continue;
-		}
-
-		// lineto
-		if( hasflag( p.type, CMD_L ) ) {
-			lineto( prev, p, print_point );
-			prev = p;
-			continue;
-		}
-
-		// horizontal lineto
-		if( hasflag( p.type, CMD_H ) ) {
-			lineto( prev, p, print_point );
-			prev = p;
-			continue;
-		}
-
-		// vertical lineto
-		if( hasflag( p.type, CMD_V ) ) {
-			lineto( prev, p, print_point );
-			prev = p;
-			continue;
-		}
-
-		// curveto
-		if( hasflag( p.type, CMD_C ) ) {
-			point bp1 = p;
-			point bp2 = _b->p[++i];
-			point end = _b->p[++i];
-			curveto( prev, bp1, bp2, end, print_point );
-			prev = end;
-			prev_cp = bp2;
-			continue;
-		}
-
-		// smooth curveto
-		if( hasflag( p.type, CMD_S ) ) {
-			point bp1;
-			if( !hasflag( prev.type, CMD_C ) && !hasflag( prev.type, CMD_S ) ) {
-				bp1 = prev;
-				bp1.type = CMD_S + p.type % 2;
-			} else {
-				bp1.x = 2*prev.x-prev_cp.x;
-				bp1.y = 2*prev.y-prev_cp.y;
-				bp1.type = CMD_S + p.type % 2;
-			}
-			point bp2 = p;
-			point end = _b->p[++i];
-			curveto( prev, bp1, bp2, end, print_point );
-			prev = end;
-			prev_cp = bp2;
-			continue;
-		}
-
-		// quadratic curveto
-		if( hasflag( p.type, CMD_Q ) ) {
-			point bp = p;
-			point end = _b->p[++i];
-			q_curveto( prev, bp, end, print_point );
-			prev = end;
-			prev_cp = bp;
-			continue;
-		}
-
-		// smooth quadratic curveto
-		if( hasflag( p.type, CMD_T ) ) {
-			point bp;
-			if( !hasflag( prev.type, CMD_Q ) && !hasflag( prev.type, CMD_T ) ) {
-				bp = prev;
-				bp.type = CMD_T + p.type % 2;
-			} else {
-				bp.x = 2*prev.x-prev_cp.x;
-				bp.y = 2*prev.y-prev_cp.y;
-				bp.type = CMD_T + p.type % 2;
-			}
-			point end = p;
-			q_curveto( prev, bp, end, print_point );
-			prev = end;
-			prev_cp = bp;
-			continue;
-		}
-
-		// elliptical arc
-		if( hasflag( p.type, CMD_A ) ) {
-			double a = p.x;
-			double b = p.y;
-			double th = _b->p[++i].x; // NB degrees
-			char large_arc = (int)(_b->p[i].y) % 2;
-			char sweep = _b->p[i].y > 1;
-			point end = _b->p[++i];
-			ell_arc( prev, a, b, th, large_arc, sweep, end, print_point );
-			prev = end;
-			continue;
-		}
-
-		// closeto
-		if( hasflag( p.type, CMD_Z ) ) {
-			lineto( prev, p, print_point );
-			prev = p;
-			continue;
-		}
-	}
-
-	return 0;
-}
-int main( int argc, char *argv[] ) {
-	// load the file to a char
-	char *line = NULL; load_line( &line, argc==2?argv[1]:"path" );
-
-	// split into tokens
-	token *tl = NULL; tokenize( line, &tl );
-	free( line );
-
-	// convert tokens into path
-	path b = init_path( );
-	map_path( &b, tl );
-
-	// draw
-	printf( "<html><body><svg width='1000' height='1000' style='background-color:#ff9'>\n" );
-	print( &b );
-	printf( "</svg></body></html>\n" );
-
-	// clean up
-	free_path( &b );
-	free_tl( tl );
-	return 0;
-}

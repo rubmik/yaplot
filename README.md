@@ -14,8 +14,25 @@ Projekti on aloitettu loppukeväästä 2025, ja sitä on vähitellen muilta kiir
 
 Projektin nimi "yaplot" tulee sanoista "yet another plotter", "jälleen uusi piirturi".
 
-## TILANNE 5.10.2025
+## TILANNE 18.11.2025
 
-Valmiina on käsivarren ohjaus simulaatiossa ja polkutulkki. Lisäksi on AWK:lla tehty SVG-tiedostojen esiprosessori, jolla SVG-tiedostosta saa nopeasti ulos halutun datan piirturia varten.
+Muutosta ja muista kiireistä aiheutuneen tauon jälkeen olen taas ehtinyt edistää projektia. Polkutulkki on nyt alkeellisella tasolla yhdistetty simulaatioon, mutta vaaditaan vielä testejä ja säätöjä, jotta ohjelman halutunlainen toiminta saadaan taattua.
 
-Seuraavaksi vuorossa on polkutulkin yhdistäminen simulaatioon, jonka jälkeen voidaan alkaa laitteen rakentaminen ja simulaation porttaaminen itse laitteelle.
+Ohjelmoinnin tauosta huolimatta käytännön toteutukseen liittyvää tutkimusta on saatu edistettyä. Erityisesti on tutkittu, millaisia komponentteja tarvitaan (askelmoottorit ja niiden ohjaimet varsiin, servo Z-liikkeeseen). Koska askelmoottorit ovat verrattain "painavia", ensimmäistä vartta voidaan ohjata suoraan, mutta toiseen tarvitaan hihnakäyttö. Koodipuolen ollessa pitkälti valmis laitteen fyysinen rakentaminen alkaa tulla ajankohtaisemmaksi.
+
+Käytännön toteutuksessa on edessä myös ongelma, jota ei osattu huomioida oikein alussa. Ohjelman binääri vie nykyisellään noin 35 kilotavua (GCC:llä käännettynä), kun Arduino Unon Flash-muistissa on tilaa vain 32 kilotavua. Vaikka ohjelman voisikin saada puristettua tarpeeksi pieneksi, pahempi muistiongelma on RAM-puolella: testattaessa Valgrindillä ohjelma allokoi kymmeniä kilotavuja muistia jo hyvin yksinkertaisella polulla, mutta Arduino Unon RAM on vain 2 kilotavua. Toisin sanoen laskenta on tehtävä PC:llä, josta vain lähetetään liikkeet mikrokontrollerille sarjaväylän kautta.
+
+Tehty:
+
+- SVG-tiedostojen esiprosessori
+- SVG-polkutulkki
+- piirturin simulaatio
+
+Tehtävänä:
+
+- laitteen fyysinen rakentaminen
+    - mekaaninen proto
+    - elektroniikan lisääminen
+- mikrokontrollerin ohjaaminen
+    - moottorien ohjaukset mikrokontrollerilla
+    - keskustelu sarjaväylän kautta
